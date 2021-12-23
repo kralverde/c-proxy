@@ -75,7 +75,7 @@ int main (int argc, char *argv[])
    
     while (!end_server)
     {
-        
+        /*
         printf("State:\n");
         for (i = 0; i < max_fds; i++)
         {
@@ -87,7 +87,7 @@ int main (int argc, char *argv[])
         }
         printf("#FDS %d\n", nfds);
         printf("Waiting on poll()...\n");
-        
+        */
         if (nfds < 1)
         {
             printf("Bad #fds\n");
@@ -171,11 +171,11 @@ int main (int argc, char *argv[])
                             {
                                 main_size = 0;
                                 main_wanted = 0;
-                                if (fds[main_cache[0] + 2].fd > 0)
+                                if (fds[main_cache[0] + 1].fd > 0)
                                 {
                                     printf("Closing connection %d\n", main_cache[0]);
-                                    close(fds[main_cache[0] + 2].fd);
-                                    fds[main_cache[0] + 2].fd = -1;
+                                    close(fds[main_cache[0] + 1].fd);
+                                    fds[main_cache[0] + 1].fd = -1;
                                     nfds--;
                                     printf("nfds--2\n");
                                 }
@@ -183,7 +183,7 @@ int main (int argc, char *argv[])
                         }
                         else
                         {
-                            printf("Main size not 4, waiting for more: %d\n", 4-main_size);
+                            //printf("Main size not 4, waiting for more: %d\n", 4-main_size);
                             ret_val = recv(socket_fd, &main_cache[main_size], 4-main_size, 0);
                             if (ret_val < 0)
                             {
