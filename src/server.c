@@ -450,13 +450,13 @@ int main (int argc, char *argv[])
                     preamble[0] = (uint8_t)(i-2);
                     preamble[1] = 0;
                     len = ret_val;
-                    temp_16 = htons(ret_val);
+                    temp_16 = htons((uint16_t)ret_val);
                     memcpy(&preamble[2], &temp_16, 2);
                     memcpy(send_buffer, preamble, 4);
                     memcpy(&send_buffer[4], recv_buffer, len);
 
                     ret_val = send(service_fd, send_buffer, len + 4, 0);
-                    printf("Sent:\n");
+                    printf("Sent with size %d:\n", len);
                     print_bytes(send_buffer, len + 4);
 
                     if (ret_val < 0)

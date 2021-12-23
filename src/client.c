@@ -312,12 +312,12 @@ int main (int argc, char *argv[])
                     preamble[0] = (uint8_t)(i-1);
                     preamble[1] = 0;
                     len = ret_val;
-                    temp_16 = htons(ret_val);
+                    temp_16 = htons((uint16_t)ret_val);
                     memcpy(&preamble[2], &temp_16, 2);
                     memcpy(send_buffer, preamble, 4);
                     memcpy(&send_buffer[4], recv_buffer, len);
 
-                    printf("Sending:\n");
+                    printf("Sending with size %d:\n", ret_val);
                     print_bytes(send_buffer, ret_val + 4);
 
                     ret_val = send(socket_fd, send_buffer, len + 4, 0);
