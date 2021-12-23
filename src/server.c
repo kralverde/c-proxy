@@ -353,7 +353,7 @@ int main (int argc, char *argv[])
 
                         if (ret_val < 4)
                         {
-                            printf("Bad preamble size\n");
+                            printf("Bad preamble size %d\n", ret_val);
                             close_connection = 1;
                             break;
                         }
