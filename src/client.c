@@ -190,7 +190,7 @@ int main (int argc, char *argv[])
                         memcpy(&temp_16, &send_buffer[2], 2);
                         temp_16 = ntohs(temp_16);
 
-                        if (temp_16 != (uint16_t)ret_val)
+                        if (temp_16 != (uint16_t)(ret_val - 4))
                         {
                             printf("Bad length.\n");
                             exit(EXIT_FAILURE);
