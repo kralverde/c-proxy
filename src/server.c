@@ -397,7 +397,7 @@ int main (int argc, char *argv[])
 
                         if (ret_val == 0)
                         {
-                            printf("Connection closed (1)\n");
+                            printf("Connection closed (2)\n");
                             close_connection = 1;
                             break;
                         }
