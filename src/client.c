@@ -205,33 +205,35 @@ int main (int argc, char *argv[])
                     }
                     else
                     {
-                        ret_val = recv(socket_fd, &main_cache[main_size], main_wanted - main_size, 0);
-                        if (ret_val < 0)
-                        {
-                            if (errno != EWOULDBLOCK)
+                        if (!(main_wanted - main_size))
+                        {    
+                            ret_val = recv(socket_fd, &main_cache[main_size], main_wanted - main_size, 0);
+                            if (ret_val < 0)
                             {
-                                perror("recv() failed");
-                                close_connection = 1;
+                                if (errno != EWOULDBLOCK)
+                                {
+                                    perror("recv() failed");
+                                    close_connection = 1;
+                                }
+                                break;
                             }
-                            break;
+
+                            if (ret_val == 0)
+                            {
+                                printf("Connection closed (1)\n");
+                                close_connection = 1;
+                                break;
+                            }
+
+                            if (ret_val + main_size > MAX_RECV + 4)
+                            {
+                                printf("Invalid size %d\n", ret_val + main_size);
+                                close_connection = 1;
+                                break;
+                            }
+
+                            main_size += ret_val;
                         }
-
-                        if (ret_val == 0)
-                        {
-                            printf("Connection closed (1)\n");
-                            close_connection = 1;
-                            break;
-                        }
-
-                        if (ret_val + main_size > MAX_RECV + 4)
-                        {
-                            printf("Invalid size %d\n", ret_val + main_size);
-                            close_connection = 1;
-                            break;
-                        }
-
-                        main_size += ret_val;
-
                         //printf("Received:\n");
                         //print_bytes(main_cache, main_size);
 
