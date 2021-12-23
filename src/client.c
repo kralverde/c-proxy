@@ -192,7 +192,7 @@ int main (int argc, char *argv[])
 
                         if (temp_16 != (uint16_t)(ret_val - 4))
                         {
-                            printf("Bad length.\n");
+                            printf("Bad length expected %d, was %d\n", temp_16, (ret_val-4));
                             exit(EXIT_FAILURE);
                         }
 
