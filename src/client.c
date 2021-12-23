@@ -240,7 +240,7 @@ int main (int argc, char *argv[])
                             temp_16 = main_size;
                             main_size = 0;
                             main_wanted = 0;
-                            j = fds[2+conn_index].fd;
+                            j = fds[1+conn_index].fd;
                             if (j <= 0)
                             {
                                 if ((j = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
