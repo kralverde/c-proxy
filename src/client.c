@@ -15,6 +15,7 @@
 
 static void print_bytes(void *buf, int size)
 {
+    return;
     int i;
     for (i = 0; i < size; i++)
     {
@@ -75,7 +76,7 @@ int main (int argc, char *argv[])
    
     while (!end_server)
     {
-        /*
+        
         printf("State:\n");
         for (i = 0; i < max_fds; i++)
         {
@@ -87,7 +88,13 @@ int main (int argc, char *argv[])
         }
         printf("#FDS %d\n", nfds);
         printf("Waiting on poll()...\n");
-        */
+        
+        if (nfds < 1)
+        {
+            printf("Bad #fds\n");
+            exit(EXIT_FAILURE);
+        }
+
         ret_val = poll(fds, max_fds, -1);
         if (ret_val < 0)
         {
@@ -111,7 +118,7 @@ int main (int argc, char *argv[])
             {
                 break;
             }
-            if (fds[i].fd < 0)
+            if (fds[i].fd <= 0)
             {
                 continue;
             }
@@ -163,8 +170,8 @@ int main (int argc, char *argv[])
                         break;
                     }
 
-                    //printf("Received:\n");
-                    //print_bytes(send_buffer, ret_val);
+                    printf("Received:\n");
+                    print_bytes(send_buffer, ret_val);
 
                     cnt = 0;
                     if (send_buffer[1])
@@ -232,8 +239,8 @@ int main (int argc, char *argv[])
                             fds[1+send_buffer[0]].events = POLLIN;
                             nfds++;
                         }
-                        //printf("Sent\n");
-                        //print_bytes(&send_buffer[4], temp_16);
+                        printf("Sent\n");
+                        print_bytes(&send_buffer[4], temp_16);
                         ret_val = send(j, &send_buffer[4], temp_16, 0);
                         if (ret_val < 0)
                         {
@@ -285,8 +292,8 @@ int main (int argc, char *argv[])
                         break;
                     }
 
-                    //printf("Recieved:\n");
-                    //print_bytes(recv_buffer, ret_val);
+                    printf("Recieved:\n");
+                    print_bytes(recv_buffer, ret_val);
 
                     preamble[0] = (uint8_t)(i-1);
                     preamble[1] = 0;
@@ -296,8 +303,8 @@ int main (int argc, char *argv[])
                     memcpy(send_buffer, preamble, 4);
                     memcpy(&send_buffer[4], recv_buffer, len);
 
-                    //printf("Sending:\n");
-                    //print_bytes(send_buffer, ret_val + 4);
+                    printf("Sending:\n");
+                    print_bytes(send_buffer, ret_val + 4);
 
                     ret_val = send(socket_fd, send_buffer, len + 4, 0);
                     if (ret_val < 0)

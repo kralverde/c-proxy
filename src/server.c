@@ -17,6 +17,7 @@
 
 static void print_bytes(void *buf, int size)
 {
+    return;
     int i;
     for (i = 0; i < size; i++)
     {
@@ -210,7 +211,7 @@ int main (int argc, char *argv[])
 
     while (!end_server)
     {
-        /*
+        
         printf("State:\n");
         for (i = 0; i < 2+args.max_clients; i++)
         {
@@ -222,7 +223,13 @@ int main (int argc, char *argv[])
         }
         printf("#FDS %d\n", nfds);
         printf("Waiting on poll()...\n");
-        */
+        
+        if (nfds < 1)
+        {
+            printf("Bad #fds\n");
+            exit(EXIT_FAILURE);
+        }
+
         ret_val = poll(fds, 2+args.max_clients, -1);
         if (ret_val < 0)
         {
@@ -245,7 +252,7 @@ int main (int argc, char *argv[])
             {
                 break;
             }
-            if (fds[i].fd < 0)
+            if (fds[i].fd <= 0)
             {
                 continue;
             }
@@ -261,6 +268,7 @@ int main (int argc, char *argv[])
                     close(fds[i].fd);
                     fds[i].fd = -1;
                     nfds--;
+                    printf("nfds--1\n");
                     preamble[0] = (uint8_t)(i-2);
                     preamble[1] = 1;
                     preamble[2] = 0;
@@ -339,8 +347,8 @@ int main (int argc, char *argv[])
                         break;
                     }
 
-                    //printf("Received:\n");
-                    //print_bytes(send_buffer, ret_val);
+                    printf("Received:\n");
+                    print_bytes(send_buffer, ret_val);
 
                     cnt = 0;
                     if (send_buffer[1])
@@ -349,6 +357,7 @@ int main (int argc, char *argv[])
                         close(fds[send_buffer[0] + 2].fd);
                         fds[send_buffer[0] + 2].fd = -1;
                         nfds--;
+                        printf("nfds--2\n");
                     }
                     else
                     {
@@ -370,8 +379,8 @@ int main (int argc, char *argv[])
                             break;
                         }
                         ret_val = send(j, &send_buffer[4], temp_16, 0);
-                        //printf("Sent\n");
-                        //print_bytes(&send_buffer[4], temp_16);
+                        printf("Sent\n");
+                        print_bytes(&send_buffer[4], temp_16);
                         if (ret_val < 0)
                         {
                             perror("send() failed");
@@ -382,6 +391,7 @@ int main (int argc, char *argv[])
                             close(j);
                             fds[2+send_buffer[0]].fd = -1;
                             nfds--;
+                            printf("nfds--3\n");
                             if (ret_val < 0)
                             {
                                 perror("send() failed");
@@ -423,8 +433,8 @@ int main (int argc, char *argv[])
                         break;
                     }
 
-                    //printf("Recieved:\n");
-                    //print_bytes(recv_buffer, ret_val);
+                    printf("Recieved:\n");
+                    print_bytes(recv_buffer, ret_val);
 
                     preamble[0] = (uint8_t)(i-2);
                     preamble[1] = 0;
@@ -435,8 +445,8 @@ int main (int argc, char *argv[])
                     memcpy(&send_buffer[4], recv_buffer, len);
 
                     ret_val = send(service_fd, send_buffer, len + 4, 0);
-                    //printf("Sent:\n");
-                    //print_bytes(send_buffer, len + 4);
+                    printf("Sent:\n");
+                    print_bytes(send_buffer, len + 4);
 
                     if (ret_val < 0)
                     {
@@ -452,6 +462,7 @@ int main (int argc, char *argv[])
                     close(fds[i].fd);
                     fds[i].fd = -1;
                     nfds--;
+                    printf("nfds--4\n");
                     if (close_connection < 2)
                     {
                         preamble[0] = (uint8_t)(i-2);
