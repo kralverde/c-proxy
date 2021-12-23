@@ -28,11 +28,11 @@ int main (int argc, char *argv[])
 {
     int socket_fd;
     c_args args;
-    uint8_t recv_buffer[MAX_RECV], preamble[4], send_buffer[4+MAX_RECV];
+    uint8_t recv_buffer[MAX_RECV], preamble[4], send_buffer[4+MAX_RECV], main_cache[4+MAX_RECV];
     struct pollfd *fds;
-    uint8_t end_server = 0, close_connection;
+    uint8_t end_server = 0, close_connection, conn_index;
     int nfds = 1, new_nfds, ret_val, i, j, max_fds, cnt, len, on = 1;
-    uint16_t temp_16;
+    uint16_t temp_16, main_size = 0, main_wanted = 0;
 
     if (parse_client_arguments(argc, argv, &args) != 0)
     {
@@ -152,127 +152,176 @@ int main (int argc, char *argv[])
                 close_connection = 0;
                 do
                 {
-                    ret_val = recv(socket_fd, send_buffer, MAX_RECV + 4, 0);
-                    if (ret_val < 0)
+                    if (!main_wanted)
                     {
-                        if (errno != EWOULDBLOCK)
+                        ret_val = recv(socket_fd, preamble, 4, 0);
+                        if (ret_val < 0)
                         {
-                            perror("recv() failed");
-                            close_connection = 1;
+                            if (errno != EWOULDBLOCK)
+                            {
+                                perror("recv() failed");
+                                close_connection = 1;
+                            }
+                            break;
                         }
-                        break;
-                    }
 
-                    if (ret_val == 0)
-                    {
-                        printf("Connection closed (1)\n");
-                        close_connection = 1;
-                        break;
-                    }
-
-                    printf("Received:\n");
-                    print_bytes(send_buffer, ret_val);
-
-                    cnt = 0;
-                    if (send_buffer[1])
-                    {
-                        if (fds[send_buffer[0] + 1].fd > 0)
+                        if (ret_val == 0)
                         {
-                            printf("Closing connection %d\n", send_buffer[0]);
-                            close(fds[send_buffer[0] + 1].fd);
-                            fds[send_buffer[0] + 1].fd = -1;
-                            nfds--;
-                            printf("nfds--2\n");
+                            printf("Connection closed (1)\n");
+                            close_connection = 1;
+                            break;
+                        }
+
+                        if (ret_val < 4)
+                        {
+                            printf("Bad preamble size\n");
+                            close_connection = 1;
+                            break;
+                        }
+                        conn_index = preamble[0];
+                        memcpy(&temp_16, &preamble[2], 2);
+                        main_wanted = ntohs(temp_16);
+
+                        if (main_wanted > MAX_RECV)
+                        {
+                            printf("Invalid main wanted\n");
+                            close_connection = 1;
+                            break;
+                        }
+
+                        if (preamble[1])
+                        {
+                            main_size = 0;
+                            main_wanted = 0;
+                            if (fds[preamble[0] + 2].fd > 0)
+                            {
+                                printf("Closing connection %d\n", preamble[0]);
+                                close(fds[preamble[0] + 2].fd);
+                                fds[preamble[0] + 2].fd = -1;
+                                nfds--;
+                                printf("nfds--2\n");
+                            }
                         }
                     }
                     else
                     {
-                        memcpy(&temp_16, &send_buffer[2], 2);
-                        temp_16 = ntohs(temp_16);
-
-                        if (temp_16 != (uint16_t)(ret_val - 4))
+                        ret_val = recv(socket_fd, &main_cache[main_size], main_wanted - main_size, 0);
+                        if (ret_val < 0)
                         {
-                            printf("Bad length expected %d, was %d\n", temp_16, (ret_val-4));
-                            exit(EXIT_FAILURE);
+                            if (errno != EWOULDBLOCK)
+                            {
+                                perror("recv() failed");
+                                close_connection = 1;
+                            }
+                            break;
                         }
 
-                        j = fds[1+send_buffer[0]].fd;
-                        if (j <= 0)
+                        if (ret_val == 0)
                         {
-                            if ((j = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-                                perror("failed to create socket");
-                                send_buffer[1] = 1;
-                                send_buffer[2] = 0;
-                                send_buffer[3] = 0;
-                                ret_val = send(socket_fd, send_buffer, 4, 0);
-                                fds[1+send_buffer[0]].fd = -1;
+                            printf("Connection closed (1)\n");
+                            close_connection = 1;
+                            break;
+                        }
+
+                        if (ret_val + main_size > MAX_RECV + 4)
+                        {
+                            printf("Invalid size %d\n", ret_val + main_size);
+                            close_connection = 1;
+                            break;
+                        }
+
+                        main_size += ret_val;
+
+                        printf("Received:\n");
+                        print_bytes(main_cache, main_size);
+
+                        if (main_size == main_wanted)
+                        {
+                            temp_16 = main_size;
+                            main_size = 0;
+                            main_wanted = 0;
+                            j = fds[2+conn_index].fd;
+                            if (j <= 0)
+                            {
+                                if ((j = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+                                {
+                                    perror("failed to create socket");
+                                    send_buffer[1] = 1;
+                                    send_buffer[2] = 0;
+                                    send_buffer[3] = 0;
+                                    ret_val = send(socket_fd, send_buffer, 4, 0);
+                                    fds[1+conn_index].fd = -1;
+                                    printf("nfds--3\n");
+                                    if (ret_val < 0)
+                                    {
+                                        perror("send() failed");
+                                        close_connection = 1;
+                                    }
+                                    break;
+                                }
+                                if(connect(j, (struct sockaddr *)&(args.service_addr), sizeof(args.service_addr)) < 0)
+                                {
+                                    perror("Connection failed");
+                                    close(j);
+                                    send_buffer[1] = 1;
+                                    send_buffer[2] = 0;
+                                    send_buffer[3] = 0;
+                                    ret_val = send(socket_fd, send_buffer, 4, 0);
+                                    fds[1+conn_index].fd = -1;
+                                    printf("nfds--4\n");
+                                    if (ret_val < 0)
+                                    {
+                                        perror("send() failed");
+                                        close_connection = 1;
+                                    }
+                                    break;
+                                }
+                                if (ioctl(j, FIONBIO, &on) < 0)
+                                {
+                                    perror("ioctl(2) failed");
+                                    send_buffer[1] = 1;
+                                    send_buffer[2] = 0;
+                                    send_buffer[3] = 0;
+                                    ret_val = send(socket_fd, send_buffer, 4, 0);
+                                    fds[1+conn_index].fd = -1;
+                                    close(j);
+                                    printf("nfds--5");
+                                    if (ret_val < 0)
+                                    {
+                                        perror("send() failed");
+                                        close_connection = 1;
+                                    }
+                                    break;
+                                }
+
+                                fds[1+conn_index].fd = j;
+                                fds[1+conn_index].events = POLLIN;
+                                nfds++;
+                            }
+                            ret_val = send(j, main_cache, temp_16, 0);
+                            printf("Sent\n");
+                            print_bytes(main_cache, temp_16);
+
+                            if (ret_val < 0)
+                            {
+                                perror("send() failed");
+                                main_cache[1] = 1;
+                                main_cache[2] = 0;
+                                main_cache[3] = 0;
+                                ret_val = send(socket_fd, main_cache, 4, 0);
+                                close(j);
+                                fds[1+conn_index].fd = -1;
+                                nfds--;
                                 printf("nfds--3\n");
                                 if (ret_val < 0)
                                 {
                                     perror("send() failed");
                                     close_connection = 1;
+                                    break;
                                 }
-                                break;
-                            }
-                            if(connect(j, (struct sockaddr *)&(args.service_addr), sizeof(args.service_addr)) < 0) {
-                                perror("Connection failed");
-                                close(j);
-                                send_buffer[1] = 1;
-                                send_buffer[2] = 0;
-                                send_buffer[3] = 0;
-                                ret_val = send(socket_fd, send_buffer, 4, 0);
-                                fds[1+send_buffer[0]].fd = -1;
-                                printf("nfds--4\n");
-                                if (ret_val < 0)
-                                {
-                                    perror("send() failed");
-                                    close_connection = 1;
-                                }
-                                break;
-                            }
-                            if (ioctl(j, FIONBIO, &on) < 0)
-                            {
-                                perror("ioctl(2) failed");
-                                send_buffer[1] = 1;
-                                send_buffer[2] = 0;
-                                send_buffer[3] = 0;
-                                ret_val = send(socket_fd, send_buffer, 4, 0);
-                                fds[1+send_buffer[0]].fd = -1;
-                                close(j);
-                                printf("nfds--5");
-                                if (ret_val < 0)
-                                {
-                                    perror("send() failed");
-                                    close_connection = 1;
-                                }
-                                break;
-                            }
-
-                            fds[1+send_buffer[0]].fd = j;
-                            fds[1+send_buffer[0]].events = POLLIN;
-                            nfds++;
-                        }
-                        printf("Sent\n");
-                        print_bytes(&send_buffer[4], temp_16);
-                        ret_val = send(j, &send_buffer[4], temp_16, 0);
-                        if (ret_val < 0)
-                        {
-                            perror("send() failed");
-                            send_buffer[1] = 1;
-                            send_buffer[2] = 0;
-                            send_buffer[3] = 0;
-                            ret_val = send(socket_fd, send_buffer, 4, 0);
-                            close(j);
-                            fds[1+send_buffer[0]].fd = -1;
-                            nfds--;
-                            printf("nfds--6\n");
-                            if (ret_val < 0)
-                            {
-                                perror("send() failed");
-                                close_connection = 1;
-                                break;
                             }
                         }
+                   
                     }
                 } while (1);
                 if (close_connection)

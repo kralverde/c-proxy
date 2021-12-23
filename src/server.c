@@ -28,9 +28,9 @@ static void print_bytes(void *buf, int size)
 
 int main (int argc, char *argv[])
 {
-    uint8_t recv_buffer[MAX_RECV], preamble[4], send_buffer[MAX_RECV+4];
-    uint8_t close_connection, end_server = 0;
-    uint16_t temp_16;
+    uint8_t recv_buffer[MAX_RECV], preamble[4], send_buffer[MAX_RECV+4], main_cache[MAX_RECV];
+    uint8_t close_connection, end_server = 0, conn_index;
+    uint16_t temp_16, main_size = 0, main_wanted = 0;
     int ret_val, on = 1, cnt, i, j;
     unsigned int len;
     int service_listen_fd = -1, clients_listen_fd = -1, service_fd = -1, new_fd;
@@ -331,85 +331,132 @@ int main (int argc, char *argv[])
                 close_connection = 0;
                 do
                 {
-                    ret_val = recv(service_fd, send_buffer, MAX_RECV + 4, 0);
-                    if (ret_val < 0)
+                    if (!main_wanted)
                     {
-                        if (errno != EWOULDBLOCK)
+                        ret_val = recv(service_fd, preamble, 4, 0);
+                        if (ret_val < 0)
                         {
-                            perror("recv() failed");
-                            close_connection = 1;
+                            if (errno != EWOULDBLOCK)
+                            {
+                                perror("recv() failed");
+                                close_connection = 1;
+                            }
+                            break;
                         }
-                        break;
-                    }
 
-                    if (ret_val == 0)
-                    {
-                        printf("Connection closed (1)\n");
-                        close_connection = 1;
-                        break;
-                    }
-
-                    printf("Received:\n");
-                    print_bytes(send_buffer, ret_val);
-
-                    cnt = 0;
-                    if (send_buffer[1])
-                    {
-                        if (fds[send_buffer[0] + 2].fd > 0)
+                        if (ret_val == 0)
                         {
-                            printf("Closing connection %d\n", send_buffer[0]);
-                            close(fds[send_buffer[0] + 2].fd);
-                            fds[send_buffer[0] + 2].fd = -1;
-                            nfds--;
-                            printf("nfds--2\n");
+                            printf("Connection closed (1)\n");
+                            close_connection = 1;
+                            break;
+                        }
+
+                        if (ret_val < 4)
+                        {
+                            printf("Bad preamble size\n");
+                            close_connection = 1;
+                            break;
+                        }
+                        conn_index = preamble[0];
+                        memcpy(&temp_16, &preamble[2], 2);
+                        main_wanted = ntohs(temp_16);
+
+                        if (main_wanted > MAX_RECV)
+                        {
+                            printf("Invalid main wanted\n");
+                            close_connection = 1;
+                            break;
+                        }
+
+                        if (preamble[1])
+                        {
+                            main_size = 0;
+                            main_wanted = 0;
+                            if (fds[preamble[0] + 2].fd > 0)
+                            {
+                                printf("Closing connection %d\n", preamble[0]);
+                                close(fds[preamble[0] + 2].fd);
+                                fds[preamble[0] + 2].fd = -1;
+                                nfds--;
+                                printf("nfds--2\n");
+                            }
                         }
                     }
                     else
                     {
-                        memcpy(&temp_16, &send_buffer[2], 2);
-                        temp_16 = ntohs(temp_16);
-                        
-                        if (temp_16 != (uint16_t)(ret_val-4))
+                        ret_val = recv(service_fd, &main_cache[main_size], main_wanted - main_size, 0);
+                        if (ret_val < 0)
                         {
-                            printf("Bad length expected %d, was %d\n", temp_16, (ret_val-4));
-                            exit(EXIT_FAILURE);
-                        }
-
-                        j = fds[2+send_buffer[0]].fd;
-                        if (j <= 0)
-                        {
-                            printf("Invalid client (%d)\n", send_buffer[0]);
-                            send_buffer[1] = 1;
-                            send_buffer[2] = 0;
-                            send_buffer[3] = 0;
-                            ret_val = send(service_fd, send_buffer, 4, 0);
-                            if (ret_val < 0)
+                            if (errno != EWOULDBLOCK)
                             {
-                                perror("send() failed");
+                                perror("recv() failed");
+                                close_connection = 1;
                             }
                             break;
                         }
-                        ret_val = send(j, &send_buffer[4], temp_16, 0);
-                        printf("Sent\n");
-                        print_bytes(&send_buffer[4], temp_16);
-                        if (ret_val < 0)
+
+                        if (ret_val == 0)
                         {
-                            perror("send() failed");
-                            send_buffer[1] = 1;
-                            send_buffer[2] = 0;
-                            send_buffer[3] = 0;
-                            ret_val = send(service_fd, send_buffer, 4, 0);
-                            close(j);
-                            fds[2+send_buffer[0]].fd = -1;
-                            nfds--;
-                            printf("nfds--3\n");
+                            printf("Connection closed (1)\n");
+                            close_connection = 1;
+                            break;
+                        }
+
+                        if (ret_val + main_size > MAX_RECV + 4)
+                        {
+                            printf("Invalid size %d\n", ret_val + main_size);
+                            close_connection = 1;
+                            break;
+                        }
+
+                        main_size += ret_val;
+
+                        printf("Received:\n");
+                        print_bytes(main_cache, main_size);
+
+                        if (main_size == main_wanted)
+                        {
+
+                            j = fds[2+conn_index].fd;
+                            if (j <= 0)
+                            {
+                                printf("Invalid client (%d)\n", conn_index);
+                                main_cache[1] = 1;
+                                main_cache[2] = 0;
+                                main_cache[3] = 0;
+                                ret_val = send(service_fd, main_cache, 4, 0);
+                                if (ret_val < 0)
+                                {
+                                    perror("send() failed");
+                                }
+                                break;
+                            }
+                            ret_val = send(j, main_cache, main_size, 0);
+                            printf("Sent\n");
+                            print_bytes(main_cache, main_size);
+
                             if (ret_val < 0)
                             {
                                 perror("send() failed");
-                                close_connection = 1;
-                                break;
+                                main_cache[1] = 1;
+                                main_cache[2] = 0;
+                                main_cache[3] = 0;
+                                ret_val = send(service_fd, main_cache, 4, 0);
+                                close(j);
+                                fds[2+conn_index].fd = -1;
+                                nfds--;
+                                printf("nfds--3\n");
+                                if (ret_val < 0)
+                                {
+                                    perror("send() failed");
+                                    close_connection = 1;
+                                    break;
+                                }
                             }
+                            main_size = 0;
+                            main_wanted = 0;
                         }
+                   
                     }
                 } while (1);
                 if (close_connection)

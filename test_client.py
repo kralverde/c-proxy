@@ -14,7 +14,7 @@ async def run():
     assert data == mystr
 
 async def multi():
-    routines = [run()] * 100
+    routines = [run()] * 10
     res = await asyncio.gather(*routines, return_exceptions=True)
     return res
 
