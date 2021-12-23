@@ -11,7 +11,7 @@
 
 #include "argparse.h"
 
-#define MAX_RECV 4096
+#define MAX_RECV 16384
 
 static void print_bytes(void *buf, int size)
 {
@@ -144,7 +144,7 @@ int main (int argc, char *argv[])
                 {
                     end_server = 1;
                 }
-                break;
+                continue;
             }
             else if (fds[i].fd == socket_fd)
             {
