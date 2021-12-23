@@ -240,6 +240,7 @@ int main (int argc, char *argv[])
         {
             bzero(recv_buffer, sizeof(recv_buffer));
             bzero(send_buffer, sizeof(send_buffer));
+            bzero(preamble, sizeof(preamble));
             if (cnt > new_nfds)
             {
                 break;
@@ -254,8 +255,22 @@ int main (int argc, char *argv[])
             }
             else if (fds[i].revents != POLLIN)
             {
-                printf("Error! revents = %d\n", fds[i].revents);
-                end_server = 1;
+                printf("Error! revents = %d (%d)\n", fds[i].revents, i);
+                if (fds[i].fd != service_fd && fds[i].fd != clients_listen_fd)
+                {
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                    nfds--;
+                    preamble[0] = (uint8_t)(i-2);
+                    preamble[1] = 1;
+                    preamble[2] = 0;
+                    preamble[3] = 0;
+                    ret_val = send(service_fd, preamble, 4, 0);
+                }
+                else
+                {
+                    end_server = 1;
+                }
                 break;
             }
             else if (fds[i].fd == clients_listen_fd)
@@ -404,7 +419,7 @@ int main (int argc, char *argv[])
                     if (ret_val == 0)
                     {
                         printf("Connection closed\n");
-                        close_connection = 1;
+                        close_connection = 2;
                         break;
                     }
 
@@ -437,11 +452,14 @@ int main (int argc, char *argv[])
                     close(fds[i].fd);
                     fds[i].fd = -1;
                     nfds--;
-                    preamble[0] = (uint8_t)(i-2);
-                    preamble[1] = 1;
-                    preamble[2] = 0;
-                    preamble[3] = 0;
-                    ret_val = send(service_fd, preamble, 4, 0);
+                    if (close_connection < 2)
+                    {
+                        preamble[0] = (uint8_t)(i-2);
+                        preamble[1] = 1;
+                        preamble[2] = 0;
+                        preamble[3] = 0;
+                        ret_val = send(service_fd, preamble, 4, 0);
+                    }
                 }
             }
         }

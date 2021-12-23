@@ -19,7 +19,7 @@ static void print_bytes(void *buf, int size)
     for (i = 0; i < size; i++)
     {
         if (i > 0) printf(":");
-        printf("%02X", ((char *)buf)[i]);
+        printf("%02X", ((uint8_t *)buf)[i]);
     }
     printf("\n");
 }
@@ -88,7 +88,7 @@ int main (int argc, char *argv[])
         printf("#FDS %d\n", nfds);
         printf("Waiting on poll()...\n");
         */
-        ret_val = poll(fds, nfds, -1);
+        ret_val = poll(fds, max_fds, -1);
         if (ret_val < 0)
         {
             perror("poll() failed");
@@ -105,6 +105,8 @@ int main (int argc, char *argv[])
         {
             bzero(recv_buffer, sizeof(recv_buffer));
             bzero(send_buffer, sizeof(send_buffer));
+            bzero(preamble, sizeof(preamble));
+
             if (cnt > new_nfds)
             {
                 break;
@@ -119,8 +121,22 @@ int main (int argc, char *argv[])
             }
             else if (fds[i].revents != POLLIN)
             {
-                printf("Error! revents = %d\n", fds[i].revents);
-                end_server = 1;
+                printf("Error! revents = %d (%d)\n", fds[i].revents, i);
+                if (fds[i].fd != socket_fd)
+                {
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                    nfds--;
+                    preamble[0] = (uint8_t)(i-1);
+                    preamble[1] = 1;
+                    preamble[2] = 0;
+                    preamble[3] = 0;
+                    ret_val = send(socket_fd, preamble, 4, 0);
+                }
+                else
+                {
+                    end_server = 1;
+                }
                 break;
             }
             else if (fds[i].fd == socket_fd)
@@ -153,7 +169,7 @@ int main (int argc, char *argv[])
                     cnt = 0;
                     if (send_buffer[1])
                     {
-                        printf("Closing connection\n");
+                        printf("Closing connection %d\n", send_buffer[0]);
                         close(fds[send_buffer[0] + 1].fd);
                         fds[send_buffer[0] + 1].fd = -1;
                         nfds--;
@@ -264,8 +280,8 @@ int main (int argc, char *argv[])
 
                     if (ret_val == 0)
                     {
-                        printf("Connection closed\n");
-                        close_connection = 1;
+                        printf("Connection closed (3)\n");
+                        close_connection = 2;
                         break;
                     }
 
@@ -298,11 +314,14 @@ int main (int argc, char *argv[])
                     close(fds[i].fd);
                     fds[i].fd = -1;
                     nfds--;
-                    preamble[0] = (uint8_t)(i-1);
-                    preamble[1] = 1;
-                    preamble[2] = 0;
-                    preamble[3] = 0;
-                    ret_val = send(socket_fd, preamble, 4, 0);
+                    if (close_connection < 2)
+                    {
+                        preamble[0] = (uint8_t)(i-1);
+                        preamble[1] = 1;
+                        preamble[2] = 0;
+                        preamble[3] = 0;
+                        ret_val = send(socket_fd, preamble, 4, 0);
+                    }
                 }
             }
         }
