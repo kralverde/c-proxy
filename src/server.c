@@ -390,7 +390,7 @@ int main (int argc, char *argv[])
                             j = fds[2+conn_index].fd;
                             if (j <= 0)
                             {
-                                printf("Invalid client (%d)\n", conn_index);
+                                //printf("Invalid client (%d)\n", conn_index);
                                 main_cache[1] = 1;
                                 main_cache[2] = 0;
                                 main_cache[3] = 0;
