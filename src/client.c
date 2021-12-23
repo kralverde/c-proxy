@@ -15,7 +15,6 @@
 
 static void print_bytes(void *buf, int size)
 {
-    return;
     int i;
     for (i = 0; i < size; i++)
     {
@@ -134,6 +133,7 @@ int main (int argc, char *argv[])
                     close(fds[i].fd);
                     fds[i].fd = -1;
                     nfds--;
+                    printf("nfds--1\n");
                     preamble[0] = (uint8_t)(i-1);
                     preamble[1] = 1;
                     preamble[2] = 0;
@@ -176,10 +176,14 @@ int main (int argc, char *argv[])
                     cnt = 0;
                     if (send_buffer[1])
                     {
-                        printf("Closing connection %d\n", send_buffer[0]);
-                        close(fds[send_buffer[0] + 1].fd);
-                        fds[send_buffer[0] + 1].fd = -1;
-                        nfds--;
+                        if (fds[send_buffer[0]].fd > 0)
+                        {
+                            printf("Closing connection %d\n", send_buffer[0]);
+                            close(fds[send_buffer[0] + 1].fd);
+                            fds[send_buffer[0] + 1].fd = -1;
+                            nfds--;
+                            printf("nfds--2\n");
+                        }
                     }
                     else
                     {
@@ -196,6 +200,7 @@ int main (int argc, char *argv[])
                                 ret_val = send(socket_fd, send_buffer, 4, 0);
                                 fds[1+send_buffer[0]].fd = -1;
                                 nfds--;
+                                printf("nfds--3\n");
                                 if (ret_val < 0)
                                 {
                                     perror("send() failed");
@@ -211,6 +216,7 @@ int main (int argc, char *argv[])
                                 ret_val = send(socket_fd, send_buffer, 4, 0);
                                 fds[1+send_buffer[0]].fd = -1;
                                 nfds--;
+                                printf("nfds--4\n");
                                 if (ret_val < 0)
                                 {
                                     perror("send() failed");
@@ -227,6 +233,7 @@ int main (int argc, char *argv[])
                                 ret_val = send(socket_fd, send_buffer, 4, 0);
                                 fds[1+send_buffer[0]].fd = -1;
                                 nfds--;
+                                printf("nfds--5");
                                 if (ret_val < 0)
                                 {
                                     perror("send() failed");
@@ -252,6 +259,7 @@ int main (int argc, char *argv[])
                             close(j);
                             fds[1+send_buffer[0]].fd = -1;
                             nfds--;
+                            printf("nfds--6\n");
                             if (ret_val < 0)
                             {
                                 perror("send() failed");
@@ -321,6 +329,7 @@ int main (int argc, char *argv[])
                     close(fds[i].fd);
                     fds[i].fd = -1;
                     nfds--;
+                    printf("nfds--7\n");
                     if (close_connection < 2)
                     {
                         preamble[0] = (uint8_t)(i-1);

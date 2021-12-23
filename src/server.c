@@ -17,7 +17,6 @@
 
 static void print_bytes(void *buf, int size)
 {
-    return;
     int i;
     for (i = 0; i < size; i++)
     {
@@ -353,11 +352,14 @@ int main (int argc, char *argv[])
                     cnt = 0;
                     if (send_buffer[1])
                     {
-                        printf("Closing connection %d\n", send_buffer[0]);
-                        close(fds[send_buffer[0] + 2].fd);
-                        fds[send_buffer[0] + 2].fd = -1;
-                        nfds--;
-                        printf("nfds--2\n");
+                        if (fds[send_buffer[0]].fd > 0)
+                        {
+                            printf("Closing connection %d\n", send_buffer[0]);
+                            close(fds[send_buffer[0] + 2].fd);
+                            fds[send_buffer[0] + 2].fd = -1;
+                            nfds--;
+                            printf("nfds--2\n");
+                        }
                     }
                     else
                     {
