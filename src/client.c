@@ -11,7 +11,7 @@
 
 #include "argparse.h"
 
-#define MAX_RECV 16384
+#define MAX_RECV 4096
 
 static void print_bytes(void *buf, int size)
 {
@@ -75,7 +75,7 @@ int main (int argc, char *argv[])
    
     while (!end_server)
     {
-        
+        /*
         printf("State:\n");
         for (i = 0; i < max_fds; i++)
         {
@@ -87,7 +87,7 @@ int main (int argc, char *argv[])
         }
         printf("#FDS %d\n", nfds);
         printf("Waiting on poll()...\n");
-        
+        */
         if (nfds < 1)
         {
             printf("Bad #fds\n");
@@ -232,8 +232,8 @@ int main (int argc, char *argv[])
 
                         main_size += ret_val;
 
-                        printf("Received:\n");
-                        print_bytes(main_cache, main_size);
+                        //printf("Received:\n");
+                        //print_bytes(main_cache, main_size);
 
                         if (main_size == main_wanted)
                         {
@@ -299,8 +299,8 @@ int main (int argc, char *argv[])
                                 nfds++;
                             }
                             ret_val = send(j, main_cache, temp_16, 0);
-                            printf("Sent\n");
-                            print_bytes(main_cache, temp_16);
+                            //printf("Sent\n");
+                            //print_bytes(main_cache, temp_16);
 
                             if (ret_val < 0)
                             {
@@ -355,8 +355,8 @@ int main (int argc, char *argv[])
                         break;
                     }
 
-                    printf("Recieved:\n");
-                    print_bytes(recv_buffer, ret_val);
+                    //printf("Recieved:\n");
+                    //print_bytes(recv_buffer, ret_val);
 
                     preamble[0] = (uint8_t)(i-1);
                     preamble[1] = 0;
@@ -366,8 +366,8 @@ int main (int argc, char *argv[])
                     memcpy(send_buffer, preamble, 4);
                     memcpy(&send_buffer[4], recv_buffer, len);
 
-                    printf("Sending with size %d:\n", ret_val);
-                    print_bytes(send_buffer, ret_val + 4);
+                    //printf("Sending with size %d:\n", ret_val);
+                    //print_bytes(send_buffer, ret_val + 4);
 
                     ret_val = send(socket_fd, send_buffer, len + 4, 0);
                     if (ret_val < 0)
@@ -386,7 +386,7 @@ int main (int argc, char *argv[])
                         close(fds[i].fd);
                         fds[i].fd = -1;
                         nfds--;
-                        printf("nfds--7\n");
+                        //printf("nfds--7\n");
                         if (close_connection < 2)
                         {
                             preamble[0] = (uint8_t)(i-1);
