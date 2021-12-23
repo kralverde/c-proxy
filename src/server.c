@@ -384,6 +384,7 @@ int main (int argc, char *argv[])
                     }
                     else
                     {
+                        printf("%d\n", main_wanted - main_size);
                         ret_val = recv(service_fd, &main_cache[main_size], main_wanted - main_size, 0);
                         if (ret_val < 0)
                         {
