@@ -154,53 +154,53 @@ int main (int argc, char *argv[])
                 {
                     if (!main_wanted)
                     {
-                        ret_val = recv(socket_fd, preamble, 4, 0);
-                        if (ret_val < 0)
+                        if (main_size == 4)
                         {
-                            if (errno != EWOULDBLOCK)
-                            {
-                                perror("recv() failed");
-                                close_connection = 1;
-                            }
-                            break;
-                        }
-
-                        if (ret_val == 0)
-                        {
-                            printf("Connection closed (1)\n");
-                            close_connection = 1;
-                            break;
-                        }
-
-                        if (ret_val < 4)
-                        {
-                            printf("Bad preamble size\n");
-                            close_connection = 1;
-                            break;
-                        }
-                        conn_index = preamble[0];
-                        memcpy(&temp_16, &preamble[2], 2);
-                        main_wanted = ntohs(temp_16);
-
-                        if (main_wanted > MAX_RECV)
-                        {
-                            printf("Invalid main wanted\n");
-                            close_connection = 1;
-                            break;
-                        }
-
-                        if (preamble[1])
-                        {
+                            conn_index = main_cache[0];
+                            memcpy(&temp_16, &main_cache[2], 2);
+                            main_wanted = ntohs(temp_16);
                             main_size = 0;
-                            main_wanted = 0;
-                            if (fds[preamble[0] + 1].fd > 0)
+                            if (main_wanted > MAX_RECV)
                             {
-                                printf("Closing connection %d\n", preamble[0]);
-                                close(fds[preamble[0] + 1].fd);
-                                fds[preamble[0] + 1].fd = -1;
-                                nfds--;
-                                printf("nfds--2\n");
+                                printf("Invalid main wanted\n");
+                                close_connection = 1;
+                                break;
                             }
+
+                            if (main_cache[1])
+                            {
+                                main_size = 0;
+                                main_wanted = 0;
+                                if (fds[main_cache[0] + 2].fd > 0)
+                                {
+                                    printf("Closing connection %d\n", main_cache[0]);
+                                    close(fds[main_cache[0] + 2].fd);
+                                    fds[main_cache[0] + 2].fd = -1;
+                                    nfds--;
+                                    printf("nfds--2\n");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            ret_val = recv(socket_fd, &main_cache[main_size], 4-main_size, 0);
+                            if (ret_val < 0)
+                            {
+                                if (errno != EWOULDBLOCK)
+                                {
+                                    perror("recv() failed");
+                                    close_connection = 1;
+                                }
+                                break;
+                            }
+
+                            if (ret_val == 0)
+                            {
+                                printf("Connection closed (1)\n");
+                                close_connection = 1;
+                                break;
+                            }
+                            main_size += ret_val;
                         }
                     }
                     else

@@ -10,11 +10,20 @@ async def run():
 
     mystr = mybytes.decode("utf8")
     fp.close()
+    print(1)
+    assert data == mystr
 
+async def run2():
+    fp = urllib.request.urlopen("http://localhost:8080")
+    mybytes = fp.read()
+
+    mystr = mybytes.decode("utf8")
+    fp.close()
+    print(2)
     assert data == mystr
 
 async def multi():
-    routines = [run()] * 10
+    routines = [run(), run2()] * 1
     res = await asyncio.gather(*routines, return_exceptions=True)
     return res
 
