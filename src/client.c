@@ -193,11 +193,11 @@ int main (int argc, char *argv[])
                         {
                             main_size = 0;
                             main_wanted = 0;
-                            if (fds[preamble[0] + 2].fd > 0)
+                            if (fds[preamble[0] + 1].fd > 0)
                             {
                                 printf("Closing connection %d\n", preamble[0]);
-                                close(fds[preamble[0] + 2].fd);
-                                fds[preamble[0] + 2].fd = -1;
+                                close(fds[preamble[0] + 1].fd);
+                                fds[preamble[0] + 1].fd = -1;
                                 nfds--;
                                 printf("nfds--2\n");
                             }
