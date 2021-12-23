@@ -523,14 +523,11 @@ int main (int argc, char *argv[])
                         fds[i].fd = -1;
                         nfds--;
                         //printf("nfds--4\n");
-                        if (close_connection < 2)
-                        {
-                            preamble[0] = (uint8_t)(i-2);
-                            preamble[1] = 1;
-                            preamble[2] = 0;
-                            preamble[3] = 0;
-                            ret_val = send(service_fd, preamble, 4, 0);
-                        }
+                        preamble[0] = (uint8_t)(i-2);
+                        preamble[1] = 1;
+                        preamble[2] = 0;
+                        preamble[3] = 0;
+                        ret_val = send(service_fd, preamble, 4, 0);
                     }
                 }
             }

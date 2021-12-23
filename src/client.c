@@ -350,7 +350,7 @@ int main (int argc, char *argv[])
 
                     if (ret_val == 0)
                     {
-                        printf("Connection closed (3)\n");
+                        printf("Connection closed (to service)\n");
                         close_connection = 2;
                         break;
                     }
@@ -387,14 +387,11 @@ int main (int argc, char *argv[])
                         fds[i].fd = -1;
                         nfds--;
                         //printf("nfds--7\n");
-                        if (close_connection < 2)
-                        {
-                            preamble[0] = (uint8_t)(i-1);
-                            preamble[1] = 1;
-                            preamble[2] = 0;
-                            preamble[3] = 0;
-                            ret_val = send(socket_fd, preamble, 4, 0);
-                        }
+                        preamble[0] = (uint8_t)(i-1);
+                        preamble[1] = 1;
+                        preamble[2] = 0;
+                        preamble[3] = 0;
+                        ret_val = send(socket_fd, preamble, 4, 0);
                     }
                 }
             }
