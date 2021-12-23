@@ -11,7 +11,7 @@
 
 #include "argparse.h"
 
-#define MAX_RECV 65535
+#define MAX_RECV 4096
 
 static void print_bytes(void *buf, int size)
 {
@@ -189,6 +189,13 @@ int main (int argc, char *argv[])
                     {
                         memcpy(&temp_16, &send_buffer[2], 2);
                         temp_16 = ntohs(temp_16);
+
+                        if (temp_16 != (uint16_t)ret_val)
+                        {
+                            printf("Bad length.\n");
+                            exit(EXIT_FAILURE);
+                        }
+
                         j = fds[1+send_buffer[0]].fd;
                         if (j <= 0)
                         {
