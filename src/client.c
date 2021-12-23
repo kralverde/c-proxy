@@ -128,7 +128,7 @@ int main (int argc, char *argv[])
             else if (fds[i].revents != POLLIN)
             {
                 printf("Error! revents = %d (%d)\n", fds[i].revents, i);
-                if (fds[i].fd != socket_fd)
+                if (fds[i].fd != socket_fd && fds[i].fd > 0)
                 {
                     close(fds[i].fd);
                     fds[i].fd = -1;
@@ -199,7 +199,6 @@ int main (int argc, char *argv[])
                                 send_buffer[3] = 0;
                                 ret_val = send(socket_fd, send_buffer, 4, 0);
                                 fds[1+send_buffer[0]].fd = -1;
-                                nfds--;
                                 printf("nfds--3\n");
                                 if (ret_val < 0)
                                 {
@@ -210,12 +209,12 @@ int main (int argc, char *argv[])
                             }
                             if(connect(j, (struct sockaddr *)&(args.service_addr), sizeof(args.service_addr)) < 0) {
                                 perror("Connection failed");
+                                close(j);
                                 send_buffer[1] = 1;
                                 send_buffer[2] = 0;
                                 send_buffer[3] = 0;
                                 ret_val = send(socket_fd, send_buffer, 4, 0);
                                 fds[1+send_buffer[0]].fd = -1;
-                                nfds--;
                                 printf("nfds--4\n");
                                 if (ret_val < 0)
                                 {
@@ -232,7 +231,7 @@ int main (int argc, char *argv[])
                                 send_buffer[3] = 0;
                                 ret_val = send(socket_fd, send_buffer, 4, 0);
                                 fds[1+send_buffer[0]].fd = -1;
-                                nfds--;
+                                close(j);
                                 printf("nfds--5");
                                 if (ret_val < 0)
                                 {
@@ -326,17 +325,20 @@ int main (int argc, char *argv[])
         
                 if (close_connection)
                 {
-                    close(fds[i].fd);
-                    fds[i].fd = -1;
-                    nfds--;
-                    printf("nfds--7\n");
-                    if (close_connection < 2)
+                    if (fds[i].fd > 0)
                     {
-                        preamble[0] = (uint8_t)(i-1);
-                        preamble[1] = 1;
-                        preamble[2] = 0;
-                        preamble[3] = 0;
-                        ret_val = send(socket_fd, preamble, 4, 0);
+                        close(fds[i].fd);
+                        fds[i].fd = -1;
+                        nfds--;
+                        printf("nfds--7\n");
+                        if (close_connection < 2)
+                        {
+                            preamble[0] = (uint8_t)(i-1);
+                            preamble[1] = 1;
+                            preamble[2] = 0;
+                            preamble[3] = 0;
+                            ret_val = send(socket_fd, preamble, 4, 0);
+                        }
                     }
                 }
             }

@@ -13,7 +13,7 @@
 
 #include "argparse.h"
 
-#define MAX_RECV 4096
+#define MAX_RECV 65535
 
 static void print_bytes(void *buf, int size)
 {
@@ -21,7 +21,7 @@ static void print_bytes(void *buf, int size)
     for (i = 0; i < size; i++)
     {
         if (i > 0) printf(":");
-        printf("%02X", ((char *)buf)[i]);
+        printf("%02X", ((uint8_t *)buf)[i]);
     }
     printf("\n");
 }
@@ -264,15 +264,18 @@ int main (int argc, char *argv[])
                 printf("Error! revents = %d (%d)\n", fds[i].revents, i);
                 if (fds[i].fd != service_fd && fds[i].fd != clients_listen_fd)
                 {
-                    close(fds[i].fd);
-                    fds[i].fd = -1;
-                    nfds--;
-                    printf("nfds--1\n");
-                    preamble[0] = (uint8_t)(i-2);
-                    preamble[1] = 1;
-                    preamble[2] = 0;
-                    preamble[3] = 0;
-                    ret_val = send(service_fd, preamble, 4, 0);
+                    if (fds[i].fd > 0)
+                    {
+                        close(fds[i].fd);
+                        fds[i].fd = -1;
+                        nfds--;
+                        printf("nfds--1\n");
+                        preamble[0] = (uint8_t)(i-2);
+                        preamble[1] = 1;
+                        preamble[2] = 0;
+                        preamble[3] = 0;
+                        ret_val = send(service_fd, preamble, 4, 0);
+                    }
                 }
                 else
                 {
@@ -461,17 +464,20 @@ int main (int argc, char *argv[])
         
                 if (close_connection)
                 {
-                    close(fds[i].fd);
-                    fds[i].fd = -1;
-                    nfds--;
-                    printf("nfds--4\n");
-                    if (close_connection < 2)
+                    if (fds[i].fd > 0)
                     {
-                        preamble[0] = (uint8_t)(i-2);
-                        preamble[1] = 1;
-                        preamble[2] = 0;
-                        preamble[3] = 0;
-                        ret_val = send(service_fd, preamble, 4, 0);
+                        close(fds[i].fd);
+                        fds[i].fd = -1;
+                        nfds--;
+                        printf("nfds--4\n");
+                        if (close_connection < 2)
+                        {
+                            preamble[0] = (uint8_t)(i-2);
+                            preamble[1] = 1;
+                            preamble[2] = 0;
+                            preamble[3] = 0;
+                            ret_val = send(service_fd, preamble, 4, 0);
+                        }
                     }
                 }
             }
