@@ -355,7 +355,7 @@ int main (int argc, char *argv[])
                     cnt = 0;
                     if (send_buffer[1])
                     {
-                        if (fds[send_buffer[0]].fd > 0)
+                        if (fds[send_buffer[0] + 2].fd > 0)
                         {
                             printf("Closing connection %d\n", send_buffer[0]);
                             close(fds[send_buffer[0] + 2].fd);
@@ -372,7 +372,7 @@ int main (int argc, char *argv[])
                         j = fds[2+send_buffer[0]].fd;
                         if (j <= 0)
                         {
-                            printf("Invalid client\n");
+                            printf("Invalid client (%d)\n", send_buffer[0]);
                             send_buffer[1] = 1;
                             send_buffer[2] = 0;
                             send_buffer[3] = 0;

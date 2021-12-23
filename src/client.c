@@ -11,7 +11,7 @@
 
 #include "argparse.h"
 
-#define MAX_RECV 4096
+#define MAX_RECV 65535
 
 static void print_bytes(void *buf, int size)
 {
@@ -176,7 +176,7 @@ int main (int argc, char *argv[])
                     cnt = 0;
                     if (send_buffer[1])
                     {
-                        if (fds[send_buffer[0]].fd > 0)
+                        if (fds[send_buffer[0] + 1].fd > 0)
                         {
                             printf("Closing connection %d\n", send_buffer[0]);
                             close(fds[send_buffer[0] + 1].fd);
